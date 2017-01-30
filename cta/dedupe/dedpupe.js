@@ -8,7 +8,7 @@ const zlib = require('zlib'),
     StringDecoder = require('string_decoder').StringDecoder,
     decoder = new StringDecoder('utf8');
 
-class Processor {
+class Parser {
 
     static getPrefix(path) {
         const array = path.split('/');
@@ -39,7 +39,7 @@ class Processor {
 
     toJson(data, callback) {
         parseString(data, { mergeAttrs: true }, function(err, result) {
-            if (err) return cb(err);
+            if (err) return callback(err);
             else return callback(null, _.omit(result.ctatt, 'tmst'));
         });
     }

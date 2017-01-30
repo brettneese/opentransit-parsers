@@ -6,8 +6,8 @@ chai.use(require('chai-json-schema'))
 
 describe('getS3Record()', function() {
 
-    it('should return a valid s3 record from a AWS event', function() {
-        const event = require('event');
+    it('should return a valid s3 record from an AWS event', function() {
+        const event = require("testdata").awsEvent;
 
         // only validate things we actually need from: http://docs.aws.amazon.com/AmazonS3/latest/dev/notification-content-structure.html
         const s3Schema = {
@@ -47,7 +47,11 @@ describe('getS3Record()', function() {
 });
 
 describe('toJson()', function() {
+    it('should return a valid JSON object from an xml object', function() {
+        const event = require("testdata").xml;
 
+        expect(err).to.not.exist;
+    });
 });
 
 describe('getPrefix()', function() {
