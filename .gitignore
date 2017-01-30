@@ -40,6 +40,10 @@ admin.env
 tmp
 .coveralls.yml
 tmpdirs-serverless
+.serverless
 
 # ESLint cache
 .eslintcache
+
+# VS Code settings
+.vscode
