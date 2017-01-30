@@ -28,5 +28,5 @@ plugins:
 
 functions: 
   cta:
-    handler: functions/cta.handler
+    handler: cta/handler.dedupe
           

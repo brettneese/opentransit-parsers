@@ -1,5 +1,5 @@
 import waterfall from 'async/waterfall';
-import dedupe from '../dedupe/dedupe';
+import dedupe from './dedupe/dedupe';
 
 exports.dedupe = function(event, context, cb) {
     async.waterfall([
