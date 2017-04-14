@@ -1,12 +1,11 @@
-
-const parseString = require('xml2js').parseString,
+var parseString = require('xml2js').parseString,
     AWS = require('aws-sdk'),
     md5 = require('md5'),
     _ = require('lodash'),
     async = require('async'),
     s3 = new AWS.S3();
 
-const zlib = require('zlib'),
+var zlib = require('zlib'),
     StringDecoder = require('string_decoder').StringDecoder,
     decoder = new StringDecoder('utf8');
 
@@ -30,7 +29,7 @@ function getPrefixWithoutSpecialPath(path) {
 }
 
 export function parseS3Record(data, callback) {
-    console.log(JSON.stringify(data))
+    //console.log(JSON.stringify(data))
     try {
         var s3Record = data.Records[0].s3
     } catch (e) {
@@ -45,7 +44,7 @@ export function toJson(xml, callback) {
         if (err) return callback(err);
         else {
             let r = _.omit(result.ctatt, 'tmst');
-            console.log('toJson():' + JSON.stringify(r));
+            //console.log('toJson():' + JSON.stringify(r));
             callback(null, r);
         }
     });
@@ -60,7 +59,7 @@ export function getObjectHash(s3Record, callback) {
                 if (err) return callback(err);
                 else {
                     const r = md5(JSON.stringify(json));
-                    console.log('getObjectHash():' + r);
+                    //console.log('getObjectHash():' + r);
                     callback(null, r, s3Record, json);
                 }
             });
@@ -96,14 +95,14 @@ export function saveObject(objectHash, s3Record, json, callback) {
     var buf = new Buffer(JSON.stringify(json), 'utf-8');
 
     console.log('saving new object.....')
-    console.log(json)
+    // console.log(json)
 
     zlib.gzip(buf, function (err, result) {
         if (err) return callback(err);
         if (result) {
             var params = {
                 Bucket: s3Record.bucket.name,
-                Key: "_parsed/" + getPrefixWithoutSpecialPath(s3Record.object.key) + "/" + objectHash,
+                Key: "_parsed/" + getPrefixWithoutSpecialPath(s3Record.object.key) + "/" + objectHash + '.gz',
                 Body: result,
             };
 
