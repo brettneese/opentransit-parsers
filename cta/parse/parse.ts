@@ -18,6 +18,35 @@ var isNumberic = function (num) {
     return !isNaN(num);
 };
 
+export function parseS3Record(data, callback) {
+
+    try {
+        var s3Record = data.Records[0].s3
+    } catch (e) {
+        callback(e)
+    }
+
+    return callback(null, s3Record)
+}
+
+
+export function getS3Object(s3Record, callback) {
+        s3.getObject({ Bucket: s3Record.bucket.name, Key: s3Record.object.key }, function (err, data) {
+            if (err) return callback(err); // an error occurred
+            else return callback(null, s3Record, data.Body);           // successful response
+        });
+}
+
+export function unzipObject(s3Record, buf, callback) {
+    zlib.gunzip(buf, function (err, result) {
+        if (err) return callback(err);
+        
+        if (result) {
+            return callback(s3Record, JSON.parse(result))
+        }
+    });
+}
+
 export function transformData(s3Record, data, callback) {
     try {
         var predictionResults = data.route;
@@ -36,9 +65,12 @@ export function transformData(s3Record, data, callback) {
                 });
 
                 //mapping some things
+
                 item.routeName = element.name[0];
                 item.arrT = moment.tz(item.arrT, "YYYYMMDD HH:mm:ss", "America/Chicago").unix();
                 item.prdt = moment.tz(item.prdt, "YYYYMMDD HH:mm:ss", "America/Chicago").unix();
+                item.isApp = Boolean(item.isApp);
+                item.isDly = Boolean(item.isDly);
                 item.geohash = geohash.encode(item.lat, item.lon, 9);
                 item.meta_errCd = data.errCd[0];
                 item.meta_errNm = data.errNm[0];
@@ -62,115 +94,40 @@ export function uploadToBQ(rows, callback) {
         projectId: 'opentransit-org'
     });
 
-    var dataset = bigquery.dataset('my-dataset');
-    var table = dataset.table('my-table');
+    var dataset = bigquery.dataset('cta_dev');
+    var table = dataset.table('trains');
 
-    table.insert(rows, function (err) {
-        if (err) {
-            callback(err)
-        };
-
-        return callback(null, 'done')
-    });
+    table.insert(rows)
+        .then(function (data) {
+            return callback(null, 'done');
+        })
+        .catch(function (err) {
+            return callback(err);
+        })
 };
 
-// export function toJson(xml, callback) {
-//     parseString(xml, { mergeAttrs: true }, function (err, result) {
-//         if (err) return callback(err);
-//         else {
-//             let r = _.omit(result.ctatt, 'tmst');
-//             //console.log('toJson():' + JSON.stringify(r));
-//             callback(null, r);
-//         }
-//     });
-// }
 
-// export function getObjectHash(s3Record, callback) {
-//     s3.getObject({ Bucket: s3Record.bucket.name, Key: s3Record.object.key }, function (err, data) {
+export function responseHandler(err, result, cb) {
 
-//         if (err) return callback(err);
-//         else {
-//             toJson(decoder.write(data.Body), function (err, json) {
-//                 if (err) return callback(err);
-//                 else {
-//                     const r = md5(JSON.stringify(json));
-//                     //console.log('getObjectHash():' + r);
-//                     callback(null, r, s3Record, json);
-//                 }
-//             });
-//         }
-//     });
-// // };
+    if (result === 'done') {
+        return cb(null, result)
+    } if (err) {
+        return cb(err)
+    } else {
+        return cb('unknown error')
+    }
+}
 
-// export function checkIfDupe(objectHash, s3Record, json, callback) {
-//     s3.listObjects({ Bucket: s3Record.bucket.name, Prefix: '_parsed/' + getPrefixWithoutSpecialPath(s3Record.object.key) }, function (err, data) {
-//         var exists;
+export function handler(event, context, cb) {
+    async.waterfall([
+        _.partial(parseS3Record, event),
+        getS3Object,
+        unzipObject,
+        transformData,
+        uploadToBQ,
+    ],
+        _.partial(responseHandler, _, _, cb)
+    );
+};
 
-//         if (err) return callback(err)
-//         else {
-//             _.each(data.Contents, function (record) {
-//                 const recordHash = _.last(record.Key.split('/'));
-//                 console.log('recordHash:' + recordHash);
-//                 console.log('objectHash:' + objectHash);
-
-//                 if (recordHash === objectHash) {
-//                     exists = true;
-//                     return callback(true, 'exists')
-//                 }
-//             });
-
-//             if (!exists) {
-//                 return callback(null, objectHash, s3Record, json);
-//             }
-//         }
-//     });
-// }
-
-// export function saveObject(objectHash, s3Record, json, callback) {
-//     var buf = new Buffer(JSON.stringify(json), 'utf-8');
-
-//     console.log('saving new object.....')
-//     // console.log(json)
-
-//     zlib.gzip(buf, function (err, result) {
-//         if (err) return callback(err);
-//         if (result) {
-//             var params = {
-//                 Bucket: s3Record.bucket.name,
-//                 Key: "_parsed/" + getPrefixWithoutSpecialPath(s3Record.object.key) + "/" + objectHash + '.gz',
-//                 Body: result,
-//             };
-
-//             s3.putObject(params, function (err, data) {
-//                 if (err) return callback(err); // an error occurred
-//                 else return callback(null, 'done', data); // successful response
-//             });
-//         }
-//     });
-// }
-
-// export function responseHandler(err, result, cb) {
-
-//     if (result === 'done') {
-//         return cb(null, result)
-//     } else if (result === 'exists') {
-//         return cb('object already exists, exiting...')
-//     } else if (err) {
-//         return cb(err)
-//     } else {
-//         return cb('unknown error')
-//     }
-// }
-
-// export function handler(event, context, cb) {
-//     async.waterfall([
-//         _.partial(parseS3Record, event),
-//         getObjectHash,
-//         checkIfDupe,
-//         saveObject
-//     ],
-//         _.partial(responseHandler, _, _, cb)
-//     );
-// };
-
-// export default handler;
+export default handler;

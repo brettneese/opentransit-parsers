@@ -7,18 +7,44 @@ var expect = require('chai').expect,
     appRoot = require('app-root-path'),
     md5 = require('md5');
 
+AWSMock.config.basePath = appRoot + '/cta/parse/test_data' 
+var Parser = proxyquire('./parse', { 'aws-sdk': AWSMock });
+
 var testData = require("./test_data/testData");
 
-var Parser = require('./parse');
+describe('parseS3Record()', function () {
+    it('should return a valid s3 record from an AWS event', function (done) {
+        Parser.parseS3Record(testData.event, function (err, response) {
+            if (err) done(err);
+            
+            expect(response.bucket.name).to.be.a('string');
+            
+            done();
+        });
+    });
+});
 
-describe('unzip()', function () {
-    // it('should return a valid json object from the gzipped one', function (done) {
-    //     Parser.unzip(testData.event, function (err, response) {
-    //         if (err) done(err);
-    //         expect(response.bucket.name).to.be.a('string');
-    //         done();
-    //     });
-    // });
+describe('getS3Object()', function () {
+    it('should return a buffer of the gzipped object data from the s3 record', function (done) {
+        Parser.getS3Object(testData.s3Record, function (err, response) {
+            if (err) done(err);
+
+            expect(response).to.be.a('object');
+
+            done();
+        });
+    });
+});
+
+describe('unzipObject()', function () {
+    it('should return a valid javascript object from a gzipped s3 object', function (done) {
+        Parser.unzipObject(testData.s3Record, new Buffer(testData.gzipHex, "hex"), function (err, response) {
+
+            expect(response).to.be.a('object');
+            
+            done();
+        });
+    });
 });
 
 describe('transformData()', function () {
@@ -40,99 +66,32 @@ describe('uploadToBQ()', function () {
     it('should upload the train predictions to big query without an error', function (done) {
         Parser.uploadToBQ(testData.trainArray, function (err, response) {
             if (err) done(err);
+
+            expect(response).to.exist;
             done();
         });
     });
 });
 
+describe('responseHandler()', function () {
+    it('should return results if the function runs correctly', function (done) {
+        Parser.responseHandler(null, 'done', function (err, result) {
+            if (err) done(err);
 
-// describe('getObjectHash()', function () {
-//     it('should return a hash', function (done) {
-//         Parser.getObjectHash(testData.s3Record, function (err, response) {
-//             if (err) done(err);
-//             expect(response).to.be.a('string');
-//             done();
-//         });
-//     });
-// });
+            expect(result).to.equal('done');
+            expect(err).to.not.exist;
 
-// describe('checkIfDupe()', function () {
-//     it('should return exists if hash already exists', function (done) {
-//         Parser.checkIfDupe(testData.objectHash, testData.s3Record, testData.json, function (err, response) {
-//             expect(response).to.equal('exists');
-//             done();
-//         });
-//     });
+            done();
+        });
+    });
 
-//     it('should return the objectHash, s3record, and object if hash does not exist', function (done) {
-//         const event = require("./test_data/test_data").s3record;
+    it('should return the error if there is an error', function (done) {
+        Parser.responseHandler(new Error('error'), null, function (err, result) {
+            
+            expect(err).to.exist;
+            expect(result).to.not.exist;
 
-//         Parser.checkIfDupe('testHash', testData.s3Record, testData.json, function (err, objectHash, s3record, json) {
-//             if (err) done(err);
-
-//             expect(objectHash).to.exist;
-//             expect(s3record).to.exist;
-//             expect(json).to.exist;
-
-//             done();
-//         });
-//     });
-// });
-
-
-// describe('responseHandler()', function () {
-//     it('should return results if the function runs correctly', function (done) {
-//         Parser.responseHandler(null, 'done', function (err, result) {
-//             if (err) done(err);
-//             expect(result).to.equal('done');
-//             expect(err).to.not.exist;
-//             done();
-//         });
-//     });
-
-//     it('should return the object already exists message if the object already exists', function (done) {
-//         Parser.responseHandler(null, 'exists', function (err, result) {
-//             if (err) done(err);
-//             expect(err).to.not.exist;
-//             expect(result).to.equal('object already exists, exiting...');
-//             done();
-//         });
-//     });
-
-//     it('should return the error if there is an error', function (done) {
-//         Parser.responseHandler(new Error('error'), null, function (err, result) {
-//             expect(err).to.exist;
-//             expect(result).to.not.exist;
-//             done();
-//         });
-//     });
-// });
-
-// describe('saveObject()', function () {
-//     let s3 = new AWSMock.S3();
-
-//     it('should save the object without errors', function (done) {
-//         Parser.saveObject(testData.objectHash, testData.s3Record, testData.json, function (err, response) {
-//             if (err) done(err);
-
-//             expect(response).to.equal('done');
-//             done();
-//         });
-//     });
-
-//     it('should be able to load and unzip the file', function (done) {
-//         s3.getObject({ Bucket: testData.s3RecordParsed.bucket.name, Key: testData.s3RecordParsed.object.key }, function (err, data) {
-//             if (err) done(err);
-
-//             zlib.gunzip(data.Body, null, function (err, result) {
-//                 if (err) done(err);
-
-//                 expect(md5(data)).to.equal(testData.objectHash)
-//                 expect(data).to.be.a('object');
-//                 expect(err).to.not.exist;
-
-//                 done();
-//             });
-//         });
-//     });
-// });
+            done();
+        });
+    });
+});
