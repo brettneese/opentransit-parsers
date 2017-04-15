@@ -23,16 +23,28 @@ describe('unzip()', function () {
 
 describe('transformData()', function () {
     it('should return an array of transformed train predictions', function (done) {
-        Parser.transformData(testData.json, function (err, response) {
+        Parser.transformData(testData.s3Record, testData.json, function (err, response) {
             if (err) done(err);
+
             expect(response[0]).to.be.a('object');
-            expect(response[0].meta).to.be.a('object');
             expect(response[0].routeName).to.exist;
             expect(response).to.be.a('array');
+
             done();
         });
     });
 });
+
+
+describe('uploadToBQ()', function () {
+    it('should upload the train predictions to big query without an error', function (done) {
+        Parser.uploadToBQ(testData.trainArray, function (err, response) {
+            if (err) done(err);
+            done();
+        });
+    });
+});
+
 
 // describe('getObjectHash()', function () {
 //     it('should return a hash', function (done) {

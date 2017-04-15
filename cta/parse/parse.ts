@@ -4,55 +4,75 @@ var moment = require('moment-timezone'),
     _ = require('lodash'),
     async = require('async'),
     geohash = require('ngeohash'),
-    s3 = new AWS.S3();
+    s3 = new AWS.S3(),
+    BigQuery = require('@google-cloud/bigquery');
+
 
 var zlib = require('zlib'),
     StringDecoder = require('string_decoder').StringDecoder,
     decoder = new StringDecoder('utf8');
 
-var awsCb;
 
 // javascript is so dumb
 var isNumberic = function (num) {
     return !isNaN(num);
 };
 
-export function transformData(data, callback) {
+export function transformData(s3Record, data, callback) {
     try {
-        var meta = { errCd: data.errCd[0], errNm: data.errNm[0] };
         var predictionResults = data.route;
-        var item;
         var returnData = [];
-    
+
         _.each(predictionResults, function (element, index, list) {
             var trainsInRoute = element.train;
 
             //parsing
             _.each(trainsInRoute, function (train, property_index, list) {
-                item = _.mapValues(train, function (val, key) {
+                var item = _.mapValues(train, function (val, key) {
                     if (isNumberic(val[0])) {
                         return +val[0];
                     }
                     return val[0];
                 });
 
-                //mapping some things"
+                //mapping some things
                 item.routeName = element.name[0];
                 item.arrT = moment.tz(item.arrT, "YYYYMMDD HH:mm:ss", "America/Chicago").unix();
                 item.prdt = moment.tz(item.prdt, "YYYYMMDD HH:mm:ss", "America/Chicago").unix();
                 item.geohash = geohash.encode(item.lat, item.lon, 9);
-                item.meta = meta //_.pick(meta, _.identity);
-                //data = _.pick(item, _.identity);
+                item.meta_errCd = data.errCd[0];
+                item.meta_errNm = data.errNm[0];
+                item.meta_s3Key = s3Record.object.key;
+
+                // append to array
                 returnData.push(item)
             });
         });
-        
-        } catch (e) {
-            callback(e)
-        }
+
+    } catch (e) {
+        callback(e)
+    }
 
     return callback(null, returnData)
 }
+
+export function uploadToBQ(rows, callback) {
+
+    var bigquery = BigQuery({
+        projectId: 'opentransit-org'
+    });
+
+    var dataset = bigquery.dataset('my-dataset');
+    var table = dataset.table('my-table');
+
+    table.insert(rows, function (err) {
+        if (err) {
+            callback(err)
+        };
+
+        return callback(null, 'done')
+    });
+};
 
 // export function toJson(xml, callback) {
 //     parseString(xml, { mergeAttrs: true }, function (err, result) {
