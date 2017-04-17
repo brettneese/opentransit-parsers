@@ -47,5 +47,3 @@ tmpdirs-serverless
 
 # VS Code settings
 .vscode
-
-**/*.js
