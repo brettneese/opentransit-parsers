@@ -3,20 +3,22 @@ var moment = require("moment-timezone"),
   _ = require("lodash"),
   async = require("async"),
   geohash = require("ngeohash"),
-  s3 = new AWS.S3(),
   BigQuery = require("@google-cloud/bigquery"),
+  s3 = new AWS.S3(),
   zlib = require("zlib"),
   StringDecoder = require("string_decoder").StringDecoder,
   decoder = new StringDecoder("utf8");
+
+require('dotenv').config({silent: true})
 
 // javascript is so dumb
 var isNumberic = function(num) {
   return !isNaN(num);
 };
 
-var exports = (module.exports = {});
+var parser = (module.exports = {});
 
-exports.parseS3Record = function(data, callback) {
+parser.parseS3Record = function(data, callback) {
   try {
     var s3Record = data.Records[0].s3;
   } catch (e) {
@@ -26,7 +28,7 @@ exports.parseS3Record = function(data, callback) {
   return callback(null, s3Record);
 };
 
-exports.getS3Object = function(s3Record, callback) {
+parser.getS3Object = function(s3Record, callback) {
   s3.getObject(
     { Bucket: s3Record.bucket.name, Key: s3Record.object.key },
     function(err, data) {
@@ -38,17 +40,17 @@ exports.getS3Object = function(s3Record, callback) {
   );
 };
 
-exports.unzipObject = function(s3Record, buf, callback) {
+parser.unzipObject = function(s3Record, buf, callback) {
   zlib.gunzip(buf, function(err, result) {
     if (err) return callback(err);
 
     if (result) {
-      return callback(s3Record, JSON.parse(result));
+      return callback(null, s3Record, JSON.parse(result));
     }
   });
 };
 
-exports.transformData = function(s3Record, data, callback) {
+parser.transformData = function(s3Record, data, callback) {
   try {
     var predictionResults = data.route;
     var returnData = [];
@@ -92,13 +94,14 @@ exports.transformData = function(s3Record, data, callback) {
   return callback(null, returnData);
 };
 
-exports.uploadToBQ = function(rows, callback) {
+parser.uploadToBQ = function(rows, callback) {
   var bigquery = BigQuery({
-    projectId: "opentransit-org"
+    keyFilename: './keyfile.json',
+    projectId: process.env.BQ_PROJECTID
   });
 
-  var dataset = bigquery.dataset("cta_dev");
-  var table = dataset.table("trains");
+  var dataset = bigquery.dataset(process.env.BQ_DATASET);
+  var table = dataset.table(process.env.BQ_TABLE);
 
   table
     .insert(rows)
@@ -110,26 +113,26 @@ exports.uploadToBQ = function(rows, callback) {
     });
 };
 
-exports.responseHandler = function(err, result, cb) {
+parser.responseHandler = function(err, result, cb) {
   if (result === "done") {
     return cb(null, result);
   }
   if (err) {
-    return cb(err);
+    return cb(JSON.stringify(err));
   } else {
     return cb("unknown error");
   }
 };
 
-exports.handler = function(event, context, cb) {
+parser.handler = function(event, context, cb) {
   async.waterfall(
     [
-      _.partial(parseS3Record, event),
-      getS3Object,
-      unzipObject,
-      transformData,
-      uploadToBQ
+      _.partial(parser.parseS3Record, event),
+      parser.getS3Object,
+      parser.unzipObject,
+      parser.transformData,
+      parser.uploadToBQ
     ],
-    _.partial(responseHandler, _, _, cb)
+    _.partial(parser.responseHandler, _, _, cb)
   );
 };

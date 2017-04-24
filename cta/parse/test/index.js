@@ -8,9 +8,9 @@ var expect = require("chai").expect,
   md5 = require("md5");
 
 AWSMock.config.basePath = appRoot + "/cta/parse/test_data";
-var Parser = proxyquire("./parse", { "aws-sdk": AWSMock });
+var Parser = proxyquire("../index", { "aws-sdk": AWSMock });
 
-var testData = require("./test_data/testData");
+var testData = require("./testData");
 
 describe("parseS3Record()", function() {
   it("should return a valid s3 record from an AWS event", function(done) {

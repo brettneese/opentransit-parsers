@@ -1,0 +1,7 @@
+{
+  "lambda": {
+    "role": "opentransit-cta-parser-executor",
+    "name": "opentransit-cta-parser",
+    "region": "us-east-1"
+  }
+}

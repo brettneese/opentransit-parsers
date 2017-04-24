@@ -14,6 +14,7 @@
     "aws-sdk": "^2.7.23",
     "chai": "^3.5.0",
     "dockercloud": "^0.2.2",
+    "dotenv": "^4.0.0",
     "geohash": "0.0.1",
     "lodash": "^4.17.4",
     "md5": "^2.2.1",
@@ -25,6 +26,7 @@
     "query-string": "^4.3.2",
     "request-promise": "^4.1.1",
     "ts-loader": "^2.0.0",
+    "webpack-node-externals": "^1.5.4",
     "xml2js": "^0.4.17"
   },
   "devDependencies": {

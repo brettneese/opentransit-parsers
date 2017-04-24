@@ -47,3 +47,6 @@ tmpdirs-serverless
 
 # VS Code settings
 .vscode
+
+.env
+*keyfile*

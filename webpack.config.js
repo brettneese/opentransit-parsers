@@ -2,7 +2,10 @@ var path = require('path');
 
 module.exports = {
     externals: ['aws-sdk'],
-    entry: './cta/dedupe/dedupe.ts',
+    entry: {
+        ctaDedupe: './cta/dedupe/dedupe.ts',
+        ctaParse: './cta/parse/parse.js'
+    },
     target: 'node',
     module: {
         loaders: [
@@ -15,6 +18,6 @@ module.exports = {
     output: {
         libraryTarget: 'commonjs',
         path: path.join(__dirname, '.webpack'),
-        filename: 'cta/dedupe/dedupe.js'
+        filename: '[name].js'
     },
 };
