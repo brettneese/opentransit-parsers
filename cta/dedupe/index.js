@@ -10,15 +10,15 @@ var zlib = require('zlib'),
     decoder = new StringDecoder('utf8');
 
 var awsCb;
+var dedupe = (module.exports = {}) as any;
 
-export function getPrefix(path) {
+dedupe.getPrefix = function(path) {
     const array = path.split('/');
     const arrayFirstElements = _.initial(array)
 
     return arrayFirstElements.join("/")
 }
 
-// gets the prefix without the _raw or _parsed special path
 function getPrefixWithoutSpecialPath(path) {
 
     const array = path.split('/');
@@ -28,7 +28,7 @@ function getPrefixWithoutSpecialPath(path) {
     return arrayElements.join("/")
 }
 
-export function parseS3Record(data, callback) {
+dedupe.parseS3Record = function(data, callback) {
     //console.log(JSON.stringify(data))
     try {
         var s3Record = data.Records[0].s3
@@ -39,7 +39,7 @@ export function parseS3Record(data, callback) {
     return callback(null, s3Record)
 }
 
-export function toJson(xml, callback) {
+dedupe.toJson = function(xml, callback) {
     parseString(xml, { mergeAttrs: true }, function (err, result) {
         if (err) return callback(err);
         else {
@@ -50,7 +50,7 @@ export function toJson(xml, callback) {
     });
 }
 
-export function getObjectHash(s3Record, callback) {
+dedupe.getObjectHash = function(s3Record, callback) {
     s3.getObject({ Bucket: s3Record.bucket.name, Key: s3Record.object.key }, function (err, data) {
 
         if (err) return callback(err);
@@ -67,7 +67,7 @@ export function getObjectHash(s3Record, callback) {
     });
 };
 
-export function checkIfDupe(objectHash, s3Record, json, callback) {
+dedupe.checkIfDupe = function(objectHash, s3Record, json, callback) {
     s3.listObjects({ Bucket: s3Record.bucket.name, Prefix: '_parsed/' + getPrefixWithoutSpecialPath(s3Record.object.key) }, function (err, data) {
         var exists;
 
@@ -91,7 +91,7 @@ export function checkIfDupe(objectHash, s3Record, json, callback) {
     });
 }
 
-export function saveObject(objectHash, s3Record, json, callback) {
+dedupe.saveObject = function(objectHash, s3Record, json, callback) {
     var buf = new Buffer(JSON.stringify(json), 'utf-8');
 
     console.log('saving new object.....')
@@ -114,7 +114,7 @@ export function saveObject(objectHash, s3Record, json, callback) {
     });
 }
 
-export function responseHandler(err, result, cb) {
+dedupe.responseHandler = function(err, result, cb) {
 
     if (result === 'done') {
         return cb(null, result)
@@ -127,15 +127,13 @@ export function responseHandler(err, result, cb) {
     }
 }
 
-export function handler(event, context, cb) {
+dedupe.handler = function(event, context, cb) {
     async.waterfall([
-        _.partial(parseS3Record, event),
-        getObjectHash,
-        checkIfDupe,
-        saveObject
+        _.partial(dedupe.parseS3Record, event),
+        dedupe.getObjectHash,
+        dedupe.checkIfDupe,
+        dedupe.saveObject
     ],
-        _.partial(responseHandler, _, _, cb)
+        _.partial(dedupe.responseHandler, _, _, cb)
     );
 };
-
-export default handler;

@@ -1,0 +1,30 @@
+{
+  "name": "opentransit-cta-parser",
+  "version": "1.0.0",
+  "description": "Uploads parsed train predictions to BigQuery",
+  "main": "index.js",
+  "scripts": {
+    "create": "claudia create --profile amazon@brneese.com --handler index.handler --region us-east-1 --version prod ",
+    "add-source": "claudia add-s3-event-source --profile amazon@brneese.com --bucket com.opentransit.production.CTA_TRAIN --prefix _parsed/",
+    "update": "claudia update --profile amazon@brneese.com --version prod",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Brett Neese <brett@neese.rocks>",
+  "license": "MIT",
+  "files": [
+    "index.js"
+  ],
+  "dependencies": {
+    "async": "^2.3.0",
+    "aws-sdk": "^2.45.0",
+    "lodash": "^4.17.4",
+    "md5": "^2.2.1",
+    "xml2js": "^0.4.17"
+  },
+  "devDependencies": {
+    "app-root-path": "^2.0.1",
+    "chai": "^3.5.0",
+    "mock-aws-s3": "^2.4.0",
+    "proxyquire": "^1.7.11"
+  }
+}

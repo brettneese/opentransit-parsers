@@ -1,4 +1,4 @@
-var testData = require("./test_data/test_data"),
+var testData = require("./testData"),
     expect = require('chai').expect,
     zlib = require('zlib'),
     proxyquire = require('proxyquire').noCallThru(),
@@ -8,8 +8,8 @@ var testData = require("./test_data/test_data"),
     appRoot = require('app-root-path'),
     md5 = require('md5');
 
-AWSMock.config.basePath = appRoot + '/cta/dedupe/test_data' // Can configure a basePath for your local buckets
-var Parser = proxyquire('./dedupe', { 'aws-sdk': AWSMock });
+AWSMock.config.basePath = appRoot + '/cta/dedupe/test' // Can configure a basePath for your local buckets
+var Parser = proxyquire('../index', { 'aws-sdk': AWSMock });
 
 describe('parseS3Record()', function () {
     it('should return a valid s3 record from an AWS event', function (done) {
